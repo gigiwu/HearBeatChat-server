@@ -9,6 +9,7 @@ function guid() {
 }
 
 var http = require("http");
+http.globalAgent.maxSockets = 1000;
 var server = http.createServer(function(req,res) {
     res.write("Hello World!!");
     res.end();
@@ -37,6 +38,8 @@ function pop_room() {
     return room_id;
 }
 
+
+var others = {};
 function search_room(obj, socket) {
     var user_id = obj["user_id"];
     var name = obj["name"];
@@ -51,11 +54,11 @@ function search_room(obj, socket) {
 	    create_room(user_id, name);
 	    return;
 	}	
-
+		
 	io.emit(user_id, {
 	    role: "guest",
 	    room_id: room_id,
-	    host_name: host_name
+	    guest_name: host_name
 	});
 	
 	io.emit(host_id, {
@@ -64,29 +67,37 @@ function search_room(obj, socket) {
 	    guest_name: name
 	});	    	    
 	
+	others[user_id] = host_id;
+	others[host_id] = user_id;
+	/*
 	socket.on("room_" + room_id + "_host", function(obj) {
-	    io.emit("room_client_" + room_id + "_guest", obj);		    
+	    console.log(obj);
+	    io.emit("room_client_" + room_id + "_guest", obj);		    	    
 	});
 
 	socket.on("room_" + room_id + "_guest", function(obj) {
-	    io.emit("room_client_" + room_id + "_host", obj);
+	    console.log(obj);
+	    io.emit("room_client_" + room_id + "_host", obj);	    
 	});	    	
+	*/
     }
 }
 
 io.on('connection', function(socket) {
     console.log("client connected!!")
-
+    /*
     socket.on('disconnect', function() {
         console.log("client disconnected!!")
     });
-    socket.on("from_client", function(obj){
-        console.log(obj);
-        echo(obj);
-    });        
-
-    socket.on("search_room", function(obj) {
-	search_room(obj, socket);
+    */
+    socket.on("search_room", function(obj) {	
+	if (obj.matched == void(0)) {
+	    console.log("search_room!");
+	    search_room(obj, socket);
+	} else {
+	    console.log(obj)
+	    io.emit(others[obj.user_id], obj);
+	}
     });
 });
 
